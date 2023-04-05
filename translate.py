@@ -96,6 +96,7 @@ def translate():
     # get tranlated data from the response
     reply = response.choices[0].message.content.strip()
     answer = reply.replace(".", "")
+    answer = answer[0].lower() + answer[1:]
 
     # display the result answer to UI
     answer_label.config(text=f"Result：{answer}")
