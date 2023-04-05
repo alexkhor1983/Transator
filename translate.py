@@ -10,7 +10,7 @@ window.title("Translator based on OpenAI")
 
 FONT = tkFont.Font(size=12)  # 默认大小为12
 
-# 修改默认字体
+# multiply 1.2 to the default font size, used for bigger the button and word
 FONT.config(size=int(FONT['size'] * 1.2))
 
 window.option_add("*Font", FONT)
@@ -125,7 +125,7 @@ copy_button.pack(side=tk.LEFT, padx=30)
 clear_button = tk.Button(button_frame, text="Clear", command=clear_text)
 clear_button.pack(side=tk.RIGHT, padx=30)
 
-# 将button_frame添加到主窗口中
+# makes button_frame added to the main window
 button_frame.pack(pady=30)
 
 # Make the Tkinter Window is keeping looping unless program is closed
