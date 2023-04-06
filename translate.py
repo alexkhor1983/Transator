@@ -3,6 +3,12 @@ import tkinter as tk
 import tkinter.font as tkFont
 import openai
 import pyperclip
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+options = webdriver.ChromeOptions()
+driver = webdriver.Chrome()
+driver.get('https://desk.oneforma.com/')
 
 # Initialize Tkinter Window
 window = tk.Tk()
@@ -100,6 +106,13 @@ def translate():
 
     # display the result answer to UI
     answer_label.config(text=f"Result：{answer}")
+    
+    if 'https://desk.oneforma.com/' in driver.current_url:
+        #driver.find_element(By.TAG_NAME, "textarea").find_element(By.ID,"caption-text").send_keys(answer)
+        htmlData = driver.page_source
+        print(driver.current_url)
+        print(f"Contain element: {'True' if 'caption-text' in htmlData else 'False'}")
+        print("executed")
 
 
 def copy_answer():
