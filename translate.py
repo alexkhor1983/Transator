@@ -108,13 +108,17 @@ def translate():
     answer_label.config(text=f"Result：{answer}")
     
     if 'https://desk.oneforma.com/' in driver.current_url:
-        #driver.find_element(By.TAG_NAME, "textarea").find_element(By.ID,"caption-text").send_keys(answer)
-        htmlData = driver.page_source
-        print(driver.current_url)
-        print(f"Contain element: {'True' if 'caption-text' in htmlData else 'False'}")
-        print("executed")
+        #trying switch to iFrame with id: webapp_frame, *except* is used for second request, change to default and change iFrame again
+        try:
+            driver.switch_to.frame("webapp_frame")
+        except:
+            driver.switch_to.default_content()
+            driver.switch_to.frame("webapp_frame")
+        
+        #When inside the iFrame there is a textarea with id: caption-text, try to fill in the answer generated
+        driver.find_element(By.ID,"caption-text").send_keys(answer)
 
-
+#Copy the answer and clear the text field
 def copy_answer():
     answer = answer_label.cget("text")[7:]
     pyperclip.copy(answer)
