@@ -70,6 +70,14 @@ question_entry.bind("<Return>", run_translation)
 question_label.pack()
 question_entry.pack()
 
+def switch_iFrame():
+    if 'https://desk.oneforma.com/' in driver.current_url:
+        #trying switch to iFrame with id: webapp_frame, *except* is used for second request, change to default and change iFrame again
+        try:
+            driver.switch_to.frame("webapp_frame")
+        except:
+            driver.switch_to.default_content()
+            driver.switch_to.frame("webapp_frame")
 
 def clear_text():
     question_entry.delete(0, tk.END)
@@ -107,16 +115,11 @@ def translate():
     # display the result answer to UI
     answer_label.config(text=f"Result：{answer}")
     
-    if 'https://desk.oneforma.com/' in driver.current_url:
-        #trying switch to iFrame with id: webapp_frame, *except* is used for second request, change to default and change iFrame again
-        try:
-            driver.switch_to.frame("webapp_frame")
-        except:
-            driver.switch_to.default_content()
-            driver.switch_to.frame("webapp_frame")
-        
-        #When inside the iFrame there is a textarea with id: caption-text, try to fill in the answer generated
-        driver.find_element(By.ID,"caption-text").send_keys(answer)
+    switch_iFrame()
+    #If there is the second request, previous answer will be removed from the textarea
+    driver.find_element(By.ID,"caption-text").clear()
+    #When inside the iFrame there is a textarea with id: caption-text, try to fill in the answer generated
+    driver.find_element(By.ID,"caption-text").send_keys(answer)
 
 #Copy the answer and clear the text field
 def copy_answer():
