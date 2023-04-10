@@ -1,10 +1,55 @@
 import os
+import json
 import tkinter as tk
 import tkinter.font as tkFont
-import openai
+import tkinter.messagebox as messagebox
+from asyncio import get_event_loop
 import pyperclip
+import asyncio
+from EdgeGPT import Chatbot, ConversationStyle
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import concurrent.futures
+import threading
+
+class EntryWithMenu(tk.Entry):
+    def __init__(self, master=None, **kw):
+        super().__init__(master, **kw)
+
+        # create a right click menu
+        self.menu = tk.Menu(self, tearoff=0)
+        self.menu.add_command(label='cut', command=self.cut)
+        self.menu.add_command(label='copy', command=self.copy)
+        self.menu.add_command(label='paste', command=self.paste)
+        self.menu.add_command(label='paste as plain text', command=self.paste_plain_text)
+        self.menu.add_separator()
+        self.menu.add_command(label='select all', command=self.select_all)
+
+        # bind right click
+        self.bind('<Button-3>', self.show_menu)
+
+    def show_menu(self, event):
+        self.menu.post(event.x_root, event.y_root)
+
+    def cut(self):
+        self.event_generate('<<Cut>>')
+
+    def copy(self):
+        self.event_generate('<<Copy>>')
+
+    def paste(self):
+        self.event_generate('<<Paste>>')
+
+    def paste_plain_text(self):
+        try:
+            text = self.clipboard_get()
+            self.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            self.insert(tk.INSERT, text)
+        except tk.TclError:
+            messagebox.showwarning('Notice', 'Copy item is empty and cannot be pasted')
+
+    def select_all(self):
+        self.selection_range(0, tk.END)
 
 options = webdriver.ChromeOptions()
 driver = webdriver.Chrome()
@@ -12,9 +57,10 @@ driver.get('https://desk.oneforma.com/')
 
 # Initialize Tkinter Window
 window = tk.Tk()
-window.title("Translator based on OpenAI")
+window.title("Translator based on New Bing")
 
-FONT = tkFont.Font(size=12)  # 默认大小为12
+# default font was 12
+FONT = tkFont.Font(size=12)  
 
 # multiply 1.2 to the default font size, used for bigger the button and word
 FONT.config(size=int(FONT['size'] * 1.2))
@@ -39,39 +85,62 @@ language_option.pack()
 language_label_tr.pack()
 language_option_tr.pack()
 
+bot_instance = None
+bot_called_num = 0
 
-# Create a label and text box for OpenAI API Key
-api_key_label = tk.Label(window, text="Enter OpenAI API Key：")
-api_key_var = tk.StringVar()
-api_key_entry = tk.Entry(window, show="*", width=50, textvariable=api_key_var)
-
-# Read the text file to get OpenAI API Key
-
-if os.path.isfile("apikey.txt"):
-    with open("apikey.txt", "r") as f:
-        api_key = f.read().strip()
+async def main(bot_instance,bot_called_num):
+    #Nothing happen when no question entered
+    if(question_entry.get() == "") :
+        return
     
-    # If the api key is read and not empty, set the api key to variable
-    if api_key:
-        api_key_var.set(api_key)
+    #Check forr the number of calling in this API, If reach 19 times, make a new calling(20 is maximum number of call)
+    if(bot_called_num > 18):
+        bot_called_num = 0
+        bot_instance = None
+        close_bot(bot_instance)
+    
+    if(bot_called_num == 0):
+        bot = Chatbot(cookiePath='./cookies.json')
+    
+    if bot_instance == None:
+        bot_instance = bot
+    
+    response = await bot.ask(prompt=f"You need to act as a translator to translate {language_var_origin.get()} to {language_var_translate.get()}. Translate the following question with don't capitalize the first letter and don't add a full stop at the end. And you only need to show word that translated, here are the sentences, '{question_entry.get()}'", conversation_style=ConversationStyle.precise, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+    bot_called_num += 1
+    #await bot.close()
 
-api_key_label.pack()
-api_key_entry.pack()
-
-def run_translation(event):
-    translate()
-    copy_answer()
-    clear_text()
+    json_string = json.dumps(response)
+    data = json.loads(json_string)
+    answer = data['item']['messages'][1]['text']
+    
+    print(answer)
+    
+    answer_label.config(text=f"Result：{answer}")
+    window.update_idletasks()
+        
+    if 'https://desk.oneforma.com/' in driver.current_url:
+        switch_iFrame()
+        #If there is the second request, previous answer will be removed from the textarea
+        driver.find_element(By.ID,"caption-text").clear()
+        #When inside the iFrame there is a textarea with id: caption-text, try to fill in the answer generated
+        driver.find_element(By.ID,"caption-text").send_keys(answer)
 
 # Create a label for text need to translate
 question_label = tk.Label(window, text="Please enter text need to translate：")
-question_entry = tk.Entry(window, width=50)
-question_entry.bind("<Return>", run_translation)
+question_entry = EntryWithMenu(window, width=50)
+question_entry.bind("<Return>", lambda event: run_main_in_thread(bot_instance, bot_called_num))
 question_label.pack()
 question_entry.pack()
 
+async def close_bot(bot):
+    await bot.close()
+
+def on_closing():
+    loop = get_event_loop()
+    loop.create_task(close_bot(bot_instance))
+    window.destroy()
+
 def switch_iFrame():
-    if 'https://desk.oneforma.com/' in driver.current_url:
         #trying switch to iFrame with id: webapp_frame, *except* is used for second request, change to default and change iFrame again
         try:
             driver.switch_to.frame("webapp_frame")
@@ -81,45 +150,6 @@ def switch_iFrame():
 
 def clear_text():
     question_entry.delete(0, tk.END)
-    
-def translate():
-    # get the language that user entered
-    language = language_var_origin.get()
-    
-    #get the text user want to translate
-    question = question_entry.get()
-    
-    #get api key from the variable
-    api_key = api_key_entry.get()
-    
-    if(question == "") :
-        return
-
-    # set OpenAI API Key
-    openai.api_key = api_key
-
-    # calling OpenAI API to translate the word, and passing the data that required to translate    
-    response = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": f"You are a translator to translate {language} to {language_var_translate.get()}. Translate the following question with don't capitalize the first letter and don't add a full stop at the end. And you only need to show word that translated"},
-        {"role": "user", "content": f"{question}"},
-    ]
-)
-    
-    # get tranlated data from the response
-    reply = response.choices[0].message.content.strip()
-    answer = reply.replace(".", "")
-    answer = answer[0].lower() + answer[1:]
-
-    # display the result answer to UI
-    answer_label.config(text=f"Result：{answer}")
-    
-    switch_iFrame()
-    #If there is the second request, previous answer will be removed from the textarea
-    driver.find_element(By.ID,"caption-text").clear()
-    #When inside the iFrame there is a textarea with id: caption-text, try to fill in the answer generated
-    driver.find_element(By.ID,"caption-text").send_keys(answer)
 
 #Copy the answer and clear the text field
 def copy_answer():
@@ -127,8 +157,15 @@ def copy_answer():
     pyperclip.copy(answer)
     clear_text()
 
+def run_main_in_thread(bot_instance, bot_called_num):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor.submit(main, bot_instance, bot_called_num)
+
+def run_main_in_thread_with_threading(bot_instance, bot_called_num):
+    threading.Thread(target=asyncio.run, args=(main(bot_instance, bot_called_num),)).start()
+    
 # Add a button to translate
-translate_button = tk.Button(window, text="Translate", command=translate,font=FONT)
+translate_button = tk.Button(window, text="Translate", command=lambda: run_main_in_thread_with_threading(bot_instance, bot_called_num),font=FONT)
 translate_button.pack()
 
 # add a label to show a translated result
