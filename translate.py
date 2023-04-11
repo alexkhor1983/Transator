@@ -105,12 +105,12 @@ async def main(bot_instance,bot_called_num):
         bot_instance = bot
     
     try:
-        response = await bot.ask(prompt=f"You need to act as a translator to translate {language_var_origin.get()} to {language_var_translate.get()}.After translate, the 'The translation of 'xxxx' is xxxx ' is not needed, just need the translated sentences. Translate the following question with don't capitalize the first letter and don't add a full stop at the end. And you only need to show word that translated, here are the sentences, '{question_entry.get()}'", conversation_style=ConversationStyle.precise, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+        response = await bot.ask(prompt=f"You need to act as a translator to translate {language_var_origin.get()} to {language_var_translate.get()}.After translate, the the reply style of 'xxxx' is xxxx' is not needed. Translate the following question with don't capitalize the first letter and don't add a full stop at the end.Then try to avoid using subjective, adjective and subject pronouns words. For sentences try to make it not too simple and arrive proficient level. And you only need to show word that translated, here are the sentences, '{question_entry.get()}'", conversation_style=ConversationStyle.precise, wss_link="wss://sydney.bing.com/sydney/ChatHub")
         bot_called_num += 1
     except Exception as e:
         bot = Chatbot(cookiePath='./cookies.json')
         bot_instance = bot
-        response = await bot.ask(prompt=f"You need to act as a translator to translate {language_var_origin.get()} to {language_var_translate.get()}.After translate, the 'The translation of 'xxxx' is xxxx ' is not needed, just need the translated sentences. Translate the following question with don't capitalize the first letter and don't add a full stop at the end. And you only need to show word that translated, here are the sentences, '{question_entry.get()}'", conversation_style=ConversationStyle.precise, wss_link="wss://sydney.bing.com/sydney/ChatHub")
+        response = await bot.ask(prompt=f"You need to act as a translator to translate {language_var_origin.get()} to {language_var_translate.get()}.After translate, the 'The reply style of 'xxxx' is xxxx ' is not needed. Translate the following question with don't capitalize the first letter and don't add a full stop at the end.Then try to avoid using subjective, adjective and subject pronouns words. For sentences try to make it not too simple and arrive proficient level. And you only need to show word that translated, here are the sentences, '{question_entry.get()}'", conversation_style=ConversationStyle.precise, wss_link="wss://sydney.bing.com/sydney/ChatHub")
         bot_called_num += 1
         
     json_string = json.dumps(response)
