@@ -102,7 +102,7 @@ def translate():
     response = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
     messages=[
-        {"role": "system", "content": f"You are a translator to translate {language} to {language_var_translate.get()}. Translate the following question with don't capitalize the first letter and don't add a full stop at the end. And you only need to show word that translated"},
+        {"role": "system", "content": f"You are a translator to translate {language} to {language_var_translate.get()}. Translate the following question with don't capitalize the first letter and don't add a full stop at the end.Then try to avoid using subjective, adjective and subject pronouns words. For sentences try to make it not too simple and arrive proficient level. And you only need to show word that translated."},
         {"role": "user", "content": f"{question}"},
     ]
 )
